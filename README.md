@@ -15,6 +15,7 @@ docker exec -it [scheduler_container_name] /bin/bash
 ```
 
 Execute task
+
 ```sh
 airflow tasks test [dag_name] [task_name] 2023-11-13
 ```
