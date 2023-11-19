@@ -1,5 +1,5 @@
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.operators.bash import BashOperator
 from airflow.models import TaskInstance
  
@@ -10,6 +10,10 @@ def _t1(ti: TaskInstance):
  
 def _t2(ti: TaskInstance):
     print(ti.xcom_pull(key='xcom_key', task_ids='t1'))
+
+def _branch(ti: TaskInstance):
+    value = ti.xcom_pull(key='xcom_key', task_ids='t1')
+    return 't2' if value == 24 else 't3'
  
 with DAG(
     dag_id="xcom_dag",
@@ -22,6 +26,11 @@ with DAG(
         task_id='t1',
         python_callable=_t1
     )
+
+    branch = BranchPythonOperator(
+        task_id='branch',
+        python_callable=_branch
+    )
  
     t2 = PythonOperator(
         task_id='t2',
@@ -32,5 +41,11 @@ with DAG(
         task_id='t3',
         bash_command="echo ''"
     )
+
+    t4 = BashOperator(
+        task_id='t4',
+        bash_command="echo ''",
+        trigger_rule='none_failed_min_one_success'
+    )
  
-    t1 >> t2 >> t3
+    t1 >> branch >> [t2, t3] >> t4
